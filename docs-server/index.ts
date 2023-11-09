@@ -13,7 +13,7 @@ io.on("connection", (socket) => {
       socket.join(documentId);
       socket.emit("load-document", document.data);
     } catch (error) {
-      socket.emit("error", error);
+      socket.emit("error", error.message);
     }
     socket.on("emit-quill-changes", (delta) => {
       socket.broadcast.to(documentId).emit("recive-quill-changes", delta);
@@ -23,7 +23,7 @@ io.on("connection", (socket) => {
       try {
         await updateDocument({ _id: documentId, data });
       } catch (error) {
-        socket.emit("error", error);
+        socket.emit("error", error.message);
       }
     });
   });
