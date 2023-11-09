@@ -4,6 +4,7 @@ import ReactQuill from "react-quill";
 import { DeltaStatic, Sources } from "quill";
 import "react-quill/dist/quill.snow.css";
 import { io, Socket } from "socket.io-client";
+import { toast } from "react-toastify";
 
 const INTERVAL_TRIGGER_TIME = 3000;
 
@@ -24,6 +25,21 @@ const TextEditor: React.FC = () => {
   const [socket, setSocket] = useState<Socket>();
   const quillRef = useRef<ReactQuill>(null);
   const { id: documentId } = useParams();
+
+  const errorToast = (error: string, interval: NodeJS.Timer) => {
+    toast.error(error, {
+      position: "top-right",
+      autoClose: false,
+      hideProgressBar: true,
+      closeOnClick: false,
+      draggable: false,
+      theme: "dark",
+    });
+    clearInterval(interval);
+    quillRef.current?.getEditor().disable();
+    quillRef.current?.getEditor().setText("Server Error, Try again later.");
+    socket?.disconnect();
+  };
 
   useEffect(() => {
     const socket = io("http://localhost:3000");
@@ -52,7 +68,12 @@ const TextEditor: React.FC = () => {
       socket.emit("save-document", quill.getEditor().getContents());
     }, INTERVAL_TRIGGER_TIME);
 
-    return () => clearInterval(interval);
+    socket.on("error", (err) => errorToast(err, interval));
+
+    return () => {
+      clearInterval(interval);
+      socket.off("error", errorToast);
+    };
   }, [socket, documentId, quillRef.current]);
 
   function updateQuillWithSocket(delta: DeltaStatic) {
